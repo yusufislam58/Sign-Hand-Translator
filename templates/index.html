@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İşaret Dili Çeviri Sistemi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .menu-container, #trainingMenu {
+            max-width: 800px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 2rem;
+            display: block;
+        }
+        #mainMenu {
+            display: block;
+        }
+        #trainingMenu {
+            display: none;
+        }
+        @media (max-width: 1200px) {
+            body {
+                flex-direction: column;
+                align-items: center;
+            }
+            .menu-container, #trainingMenu {
+                margin: 1rem auto;
+            }
+        }
+        .title-section {
+            background-color: #3498db;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .menu-button {
+            background-color: #2c3e50;
+            color: white;
+            border: 2px solid #3498db;
+            padding: 1rem 2rem;
+            margin: 1rem 0;
+            border-radius: 10px;
+            width: 100%;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+        .menu-button:hover {
+            background-color: #3498db;
+            transform: translateY(-2px);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        #translationPage {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #121212;
+            padding: 2rem;
+        }
+        .camera-area {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #181818;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            padding: 2rem 2rem 1rem 2rem;
+        }
+        .text-area-web {
+            width: 100%;
+            min-height: 60px;
+            background: #23272b;
+            color: #00ffaa;
+            font-size: 2rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            padding: 1rem 1.5rem;
+            letter-spacing: 2px;
+            font-family: 'Fira Mono', 'Consolas', monospace;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: none;
+            outline: none;
+        }
+        #processedVideo {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .controls .btn {
+            font-size: 1.1rem;
+            padding: 0.7rem 2.2rem;
+            border-radius: 8px;
+        }
+        #prediction {
+            font-size: 1.3rem;
+            margin: 0.5rem 0 0.5rem 0;
+            padding: 0.7rem 1.2rem;
+            background-color: #2c3e50;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+        .back-button {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Ana Menü -->
+    <div id="mainMenu" class="menu-container">
+        <div class="title-section">
+            <h1>İşaret Dili Çeviri Sistemi</h1>
+            <p class="lead">Engelsiz İletişim İçin</p>
+        </div>
+        <div class="menu-buttons">
+            <div class="menu-button" onclick="showTranslationPage()">Çeviri Başlat</div>
+            <div class="menu-button" onclick="showTrainingMenu()">Eğitim Modu</div>
+            <div class="menu-button" onclick="showHelp()">Yardım</div>
+            <div class="menu-button" onclick="exitProgram()">Çıkış</div>
+        </div>
+        <div class="footer">
+            © 2024 İşaret Dili Çeviri Sistemi
+        </div>
+    </div>
+
+    <!-- Çeviri Sayfası -->
+    <div id="translationPage">
+        <button class="back-button" onclick="showMainMenu()">← Menüye Dön</button>
+        <div class="container-fluid camera-area">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center">
+                    <div class="text-area-web" id="webTextArea"></div>
+                    <div id="prediction" class="text-center"></div>
+                    <img id="processedVideo" class="mt-3" style="display: none;">
+                    <div class="controls">
+                        <button id="eyeModeBtn" class="btn btn-outline-info">Göz Modu</button>
+                        <button id="headModeBtn" class="btn btn-outline-warning">Kafa Modu</button>
+                        <button id="clearBtn" class="btn btn-outline-danger">Temizle</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eğitim Modları Sayfası -->
+    <div id="trainingMenu" style="display:none; max-width:800px; margin:0 auto; padding:2rem;">
+        <div class="title-section">
+            <h1>Eğitim Modları</h1>
+        </div>
+        <div class="menu-buttons">
+            <div class="menu-button" onclick="startTrainingMode('sequence')">Sıralı Eğitim Modu</div>
+            <div class="menu-button" onclick="startTrainingMode('practice')">Rastgele Pratik Modu</div>
+            <div class="menu-button" onclick="startTrainingMode('word')">Kelime Pratik Modu</div>
+            <div class="menu-button" onclick="startTrainingMode('speed')">Hız Testi Modu</div>
+            <div class="menu-button" onclick="showMainMenu()">← Ana Menüye Dön</div>
+        </div>
+    </div>
+
+    <!-- Sıralı Eğitim Modu Sayfası -->
+    <div id="sequenceTrainingPage" style="display:none; max-width:900px; margin:0 auto; padding:2rem;">
+        <button class="back-button" onclick="showTrainingMenu()">← Eğitim Modlarına Dön</button>
+        <div class="title-section">
+            <h2>Sıralı Eğitim Modu</h2>
+        </div>
+        <!-- Ses elementi -->
+        <audio id="correctSound" src="/static/sounds/rightanswer.mp3" preload="auto"></audio>
+        <div class="row mb-3">
+            <div class="col-md-6 text-center">
+                <div style="font-size:2.5rem; color:#00ffaa;">Harf: <span id="seqTargetLetter"></span></div>
+                <div id="seqProgress" style="font-size:1.2rem; color:#fff; margin-top:0.5rem;"></div>
+                <!-- Doğrulama göstergesi -->
+                <div id="seqVerifying" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <span style="color: #4caf50; font-size: 1.2rem;">Doğrulanıyor...</span>
+                        <div class="progress" style="width: 100px; height: 6px; background-color: #2c3e50;">
+                            <div id="seqVerifyingProgress" class="progress-bar" role="progressbar" 
+                                 style="width: 0%; background-color: #4caf50; transition: width 0.1s linear;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-center">
+                <img id="seqRefImage" src="" alt="Referans El İşareti" style="max-width:150px; max-height:150px; border-radius:10px; background:#23272b; padding:10px;">
+            </div>
+        </div>
+        <div class="text-center">
+            <img id="seqProcessedVideo" style="width:100%; max-width:800px; border-radius:10px; display:none;">
+        </div>
+        <div class="text-center mt-3">
+            <div id="seqSuccessMsg" style="font-size:2rem; color:#4caf50; display:none;">Harika!</div>
+        </div>
+        <div class="text-center mt-2">
+            <div id="seqScore" style="font-size:1.1rem; color:#fff;"></div>
+        </div>
+    </div>
+
+    <!-- Rastgele Pratik Modu Sayfası -->
+    <div id="practiceTrainingPage" style="display:none; max-width:900px; margin:0 auto; padding:2rem;">
+        <button class="back-button" onclick="showTrainingMenu()">← Eğitim Modlarına Dön</button>
+        <div class="title-section">
+            <h2>Rastgele Pratik Modu</h2>
+        </div>
+        <!-- Ses elementi -->
+        <audio id="practiceCorrectSound" src="/static/sounds/rightanswer.mp3" preload="auto"></audio>
+        <div class="row mb-3">
+            <div class="col-md-6 text-center">
+                <div style="font-size:2.5rem; color:#00ffaa;">Göster: <span id="practiceTargetLetter"></span></div>
+                <!-- Doğrulama göstergesi -->
+                <div id="practiceVerifying" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <span id="practiceStatus" style="font-size: 1.2rem;">Doğrulanıyor...</span>
+                        <div class="progress" style="width: 100px; height: 6px; background-color: #2c3e50;">
+                            <div id="practiceVerifyingProgress" class="progress-bar" role="progressbar" 
+                                 style="width: 0%; background-color: #4caf50; transition: width 0.1s linear;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-center">
+                <div id="practiceScore" style="font-size:1.2rem; color:#fff; margin-top:0.5rem;"></div>
+            </div>
+        </div>
+        <div class="text-center">
+            <img id="practiceProcessedVideo" style="width:100%; max-width:800px; border-radius:10px; display:none;">
+        </div>
+        <div class="text-center mt-3">
+            <div id="practiceSuccessMsg" style="font-size:2rem; color:#4caf50; display:none;">Doğru!</div>
+            <div id="practiceErrorMsg" style="font-size:2rem; color:#e74c3c; display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Kelime Pratik Modu Sayfası -->
+    <div id="wordTrainingPage" style="display:none; max-width:900px; margin:0 auto; padding:2rem;">
+        <button class="back-button" onclick="showTrainingMenu()">← Eğitim Modlarına Dön</button>
+        <div class="title-section">
+            <h2>Kelime Pratik Modu</h2>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-8 text-center">
+                <div id="wordTarget" style="font-size:2.2rem; letter-spacing:0.5rem; color:#00ffaa;"></div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div id="wordScore" style="font-size:1.2rem; color:#fff; margin-top:0.5rem;"></div>
+            </div>
+        </div>
+        <div class="text-center">
+            <img id="wordProcessedVideo" style="width:100%; max-width:800px; border-radius:10px; display:none;">
+        </div>
+        <div class="text-center mt-3">
+            <div id="wordSuccessMsg" style="font-size:2rem; color:#4caf50; display:none;">Doğru!</div>
+        </div>
+    </div>
+
+    <!-- Hız Testi Modu Sayfası -->
+    <div id="speedTestPage" style="display:none; max-width:900px; margin:0 auto; padding:2rem;">
+        <button class="back-button" onclick="showTrainingMenu()">← Eğitim Modlarına Dön</button>
+        <div class="title-section">
+            <h2>Hız Testi Modu</h2>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6 text-center">
+                <div id="speedTarget" style="font-size:2.2rem; letter-spacing:0.5rem; color:#00ffaa;"></div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div id="speedTime" style="font-size:1.2rem; color:#fff; margin-top:0.5rem;"></div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div id="speedScore" style="font-size:1.2rem; color:#fff; margin-top:0.5rem;"></div>
+            </div>
+        </div>
+        <div class="text-center">
+            <img id="speedProcessedVideo" style="width:100%; max-width:800px; border-radius:10px; display:none;">
+        </div>
+        <div class="text-center mt-3">
+            <div id="speedSuccessMsg" style="font-size:2rem; color:#4caf50; display:none;">Doğru!</div>
+            <div id="speedGameOverMsg" style="font-size:2rem; color:#e74c3c; display:none;">Süre Doldu!</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        let socket = io();
+        const processedVideo = document.getElementById('processedVideo');
+        const predictionDiv = document.getElementById('prediction');
+        const webTextArea = document.getElementById('webTextArea');
+        const eyeModeBtn = document.getElementById('eyeModeBtn');
+        const headModeBtn = document.getElementById('headModeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        let stream = null;
+        let currentMode = 'eye';
+        let lastText = '';
+        let lastTargetLetter = ''; // Önceki harfi saklamak için
+        let seqStream = null;
+        let practiceStream = null;
+        let wordStream = null;
+        let speedStream = null;
+        let practiceMessageTimeout = null; // Mesaj zamanlayıcısı için yeni değişken
+
+        // Sayfa geçişleri
+        function showTranslationPage() {
+            stopCamera(); // Önceki kamerayı kapat
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('translationPage').style.display = 'block';
+            startCamera();
+        }
+        function showMainMenu() {
+            stopCamera(); // Tüm kameraları kapat
+            document.getElementById('mainMenu').style.display = 'block';
+            document.getElementById('trainingMenu').style.display = 'none';
+            if(document.getElementById('translationPage')) document.getElementById('translationPage').style.display = 'none';
+            if(document.getElementById('sequenceTrainingPage')) document.getElementById('sequenceTrainingPage').style.display = 'none';
+            if(document.getElementById('practiceTrainingPage')) document.getElementById('practiceTrainingPage').style.display = 'none';
+            if(document.getElementById('wordTrainingPage')) document.getElementById('wordTrainingPage').style.display = 'none';
+            if(document.getElementById('speedTestPage')) document.getElementById('speedTestPage').style.display = 'none';
+        }
+        function showTrainingMenu() {
+            stopCamera(); // Önceki kamerayı kapat
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('trainingMenu').style.display = 'block';
+            // Diğer eğitim modları sayfalarını da gizle
+            if(document.getElementById('sequenceTrainingPage')) document.getElementById('sequenceTrainingPage').style.display = 'none';
+            if(document.getElementById('practiceTrainingPage')) document.getElementById('practiceTrainingPage').style.display = 'none';
+            if(document.getElementById('wordTrainingPage')) document.getElementById('wordTrainingPage').style.display = 'none';
+            if(document.getElementById('speedTestPage')) document.getElementById('speedTestPage').style.display = 'none';
+        }
+        function showHelp() {
+            alert(`\nKullanım Kılavuzu:\n\n1. Çeviri Başlat:\n   - Program başladığında kamera açılacak\n   - El işaretleriniz otomatik algılanacak\n\n2. Kontrol Modları:\n   - Göz Kontrolü (Buton ile)\n   - Kafa Kontrolü (Buton ile)\n\n3. Temel Komutlar:\n   - Temizle: Temizle butonu\n   - Çıkış: Q tuşu veya Menüye Dön\n   - Sesli Okuma: E tuşu (isteğe bağlı)\n\n4. İşaretlerin Algılanması:\n   - Elinizi kameraya gösterin\n   - Sabit tutun\n   - Sonucu ekranda görün\n            `);
+        }
+        function exitProgram() {
+            if (confirm('Programdan çıkmak istediğinizden emin misiniz?')) {
+                window.close();
+            }
+        }
+        // Kamera başlatma
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 1280,
+                        height: 720,
+                        facingMode: "user"
+                    } 
+                });
+                captureAndSendFrame();
+            } catch (err) {
+                console.error('Kamera erişimi hatası:', err);
+            }
+        }
+        // Kamera durdurma
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (seqStream) {
+                seqStream.getTracks().forEach(track => track.stop());
+                seqStream = null;
+            }
+            if (practiceStream) {
+                practiceStream.getTracks().forEach(track => track.stop());
+                practiceStream = null;
+            }
+            if (wordStream) {
+                wordStream.getTracks().forEach(track => track.stop());
+                wordStream = null;
+            }
+            if (speedStream) {
+                speedStream.getTracks().forEach(track => track.stop());
+                speedStream = null;
+            }
+        }
+        // Frame yakalama ve gönderme
+        function captureAndSendFrame() {
+            if (stream) {
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                video.onloadeddata = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    const frame = canvas.toDataURL('image/jpeg', 0.8);
+                    if (frame) {
+                        socket.emit('frame', frame);
+                    }
+                    requestAnimationFrame(captureAndSendFrame);
+                };
+            }
+        }
+        // Buton olayları
+        eyeModeBtn.addEventListener('click', () => {
+            socket.emit('key_press', { key: 'g' });
+            currentMode = 'eye';
+            eyeModeBtn.classList.add('btn-info');
+            headModeBtn.classList.remove('btn-warning');
+        });
+        headModeBtn.addEventListener('click', () => {
+            socket.emit('key_press', { key: 'k' });
+            currentMode = 'head';
+            headModeBtn.classList.add('btn-warning');
+            eyeModeBtn.classList.remove('btn-info');
+        });
+        clearBtn.addEventListener('click', () => {
+            socket.emit('key_press', { key: 'c' });
+            webTextArea.textContent = '';
+        });
+        // Socket.io olayları
+        socket.on('connect', () => {
+            console.log('Sunucuya bağlandı');
+        });
+        socket.on('result', (data) => {
+            try {
+                if (data && data.frame) {
+                    processedVideo.src = `data:image/jpeg;base64,${data.frame}`;
+                    processedVideo.style.display = 'block';
+                }
+                // Sunucudan text alanı verisi gelirse güncelle
+                if (data && data.text_lines) {
+                    webTextArea.textContent = data.text_lines.join(' ');
+                    lastText = webTextArea.textContent;
+                }
+                if (data && data.prediction) {
+                    predictionDiv.textContent = `Tahmin: ${data.prediction}`;
+                }
+            } catch (err) {
+                console.error('Sonuç işleme hatası:', err);
+            }
+        });
+        // Sayfa yüklendiğinde
+        window.addEventListener('load', () => {
+            processedVideo.style.display = 'none';
+            webTextArea.textContent = '';
+        });
+
+        // Eğitim modları arayüz fonksiyonları
+        function startTrainingMode(mode) {
+            stopCamera(); // Önceki kamerayı kapat
+            document.getElementById('trainingMenu').style.display = 'none';
+            if (mode === 'sequence') {
+                document.getElementById('sequenceTrainingPage').style.display = 'block';
+                startSequenceTraining();
+            } else if (mode === 'practice') {
+                document.getElementById('practiceTrainingPage').style.display = 'block';
+                startPracticeTraining();
+            } else if (mode === 'word') {
+                document.getElementById('wordTrainingPage').style.display = 'block';
+                startWordTraining();
+            } else if (mode === 'speed') {
+                document.getElementById('speedTestPage').style.display = 'block';
+                startSpeedTest();
+            }
+        }
+        // Sıralı Eğitim Modu başlatıcı (frontend akışı)
+        function startSequenceTraining() {
+            // Sunucuya mod başlatma isteği gönder
+            socket.emit('start_sequence_training');
+            // Kamera başlat ve frame gönder
+            startSequenceCamera();
+        }
+        function startSequenceCamera() {
+            navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720, facingMode: "user" }
+            }).then(function(stream) {
+                seqStream = stream;
+                captureAndSendSequenceFrame();
+            });
+        }
+        function captureAndSendSequenceFrame() {
+            if (seqStream) {
+                const video = document.createElement('video');
+                video.srcObject = seqStream;
+                video.play();
+                video.onloadeddata = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    const frame = canvas.toDataURL('image/jpeg', 0.8);
+                    if (frame) {
+                        socket.emit('sequence_frame', frame);
+                    }
+                    requestAnimationFrame(captureAndSendSequenceFrame);
+                };
+            }
+        }
+        // Sunucudan gelen güncellemeleri işle
+        socket.on('sequence_result', function(data) {
+            if (data.frame) {
+                document.getElementById('seqProcessedVideo').src = `data:image/jpeg;base64,${data.frame}`;
+                document.getElementById('seqProcessedVideo').style.display = 'block';
+            }
+            if (data.target_letter) {
+                // Sadece harf değiştiğinde ses çal
+                if (data.target_letter !== lastTargetLetter) {
+                    const correctSound = document.getElementById('correctSound');
+                    if (correctSound) {
+                        correctSound.currentTime = 0; // Sesi başa sar
+                        const playPromise = correctSound.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                console.log('Ses başarıyla çalındı');
+                            }).catch(error => {
+                                console.error('Ses çalma hatası:', error);
+                                // Kullanıcı etkileşimi gerekiyorsa tekrar dene
+                                document.addEventListener('click', () => {
+                                    correctSound.play().catch(e => console.log('Tekrar deneme hatası:', e));
+                                }, { once: true });
+                            });
+                        }
+                    } else {
+                        console.error('Ses elementi bulunamadı');
+                    }
+                    lastTargetLetter = data.target_letter; // Yeni harfi sakla
+                }
+                document.getElementById('seqTargetLetter').textContent = data.target_letter;
+            }
+            if (data.progress) {
+                document.getElementById('seqProgress').textContent = data.progress;
+            }
+            if (data.ref_image) {
+                document.getElementById('seqRefImage').src = data.ref_image;
+            }
+            
+            // Doğru harf yapıldığında (success true olduğunda)
+            if (data.success) {
+                // Doğrulama göstergesini göster
+                const verifyingDiv = document.getElementById('seqVerifying');
+                const progressBar = document.getElementById('seqVerifyingProgress');
+                
+                // Eğer göstergeler zaten görünür değilse, yeni animasyon başlat
+                if (verifyingDiv.style.display !== 'block') {
+                    verifyingDiv.style.display = 'block';
+                    progressBar.style.width = '0%';
+                    
+                    // Progress bar'ı 1 saniyede dolduracak şekilde animasyon
+                    const startTime = performance.now();
+                    const duration = 1000; // 1 saniye
+                    
+                    function animateProgress(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        
+                        progressBar.style.width = (progress * 100) + '%';
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(animateProgress);
+                        } else {
+                            // Tamamlandığında
+                            document.getElementById('seqSuccessMsg').style.display = 'block';
+                            setTimeout(() => {
+                                document.getElementById('seqSuccessMsg').style.display = 'none';
+                                verifyingDiv.style.display = 'none';
+                                progressBar.style.width = '0%';
+                            }, 200);
+                        }
+                    }
+                    
+                    requestAnimationFrame(animateProgress);
+                }
+            } else {
+                // Doğru harf yapılmadığında göstergeleri gizle
+                document.getElementById('seqVerifying').style.display = 'none';
+                document.getElementById('seqVerifyingProgress').style.width = '0%';
+            }
+            
+            if (data.score) {
+                document.getElementById('seqScore').textContent = data.score;
+            }
+        });
+
+        // Rastgele Pratik Modu başlatıcı (frontend akışı)
+        function startPracticeTraining() {
+            socket.emit('start_practice_training');
+            startPracticeCamera();
+        }
+        function startPracticeCamera() {
+            navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720, facingMode: "user" }
+            }).then(function(stream) {
+                practiceStream = stream;
+                document.getElementById('practiceProcessedVideo').style.display = 'block';
+                captureAndSendPracticeFrame();
+            }).catch(function(err) {
+                console.error('Kamera erişim hatası:', err);
+                alert('Kamera erişimi sağlanamadı. Lütfen kamera izinlerini kontrol edin.');
+            });
+        }
+        function captureAndSendPracticeFrame() {
+            if (practiceStream) {
+                const video = document.createElement('video');
+                video.srcObject = practiceStream;
+                video.play();
+                video.onloadeddata = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    const frame = canvas.toDataURL('image/jpeg', 0.8);
+                    if (frame) {
+                        socket.emit('practice_frame', frame);
+                    }
+                    requestAnimationFrame(captureAndSendPracticeFrame);
+                };
+            }
+        }
+        let lastPracticeTargetLetter = ''; // Önceki harfi saklamak için
+        let practiceAnimationFrame = null; // Animasyon frame'ini saklamak için
+
+        socket.on('practice_update', function(data) {
+            if (data.frame) {
+                document.getElementById('practiceProcessedVideo').src = 'data:image/jpeg;base64,' + data.frame;
+                document.getElementById('practiceProcessedVideo').style.display = 'block';
+            }
+            
+            if (data.target_letter && !data.verification_complete) {
+                document.getElementById('practiceTargetLetter').textContent = data.target_letter;
+            }
+            
+            if (data.score) {
+                document.getElementById('practiceScore').textContent = data.score;
+            }
+            
+            const verifyingDiv = document.getElementById('practiceVerifying');
+            const progressBar = document.getElementById('practiceVerifyingProgress');
+            const statusText = document.getElementById('practiceStatus');
+            const successMsg = document.getElementById('practiceSuccessMsg');
+            const errorMsg = document.getElementById('practiceErrorMsg');
+            
+            // Progress bar'ı her zaman görünür yap
+            verifyingDiv.style.display = 'block';
+
+            // Eğer önceki bir zamanlayıcı varsa ve yeni bir doğrulama başlıyorsa, onu temizle
+            if (data.hand_detected && practiceMessageTimeout) {
+                clearTimeout(practiceMessageTimeout);
+                practiceMessageTimeout = null;
+            }
+            
+            // El algılama durumu
+            if (data.hand_detected && !data.verification_complete) {
+                progressBar.style.width = data.progress + '%';
+                statusText.textContent = 'Harf algılanıyor...';
+                statusText.style.color = '#3498db';
+                progressBar.style.backgroundColor = '#3498db';
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+            } 
+            // Doğrulama sonucu
+            else if (data.verification_complete && !practiceMessageTimeout) {
+                progressBar.style.width = '100%';
+                
+                if (data.success) {
+                    statusText.textContent = 'Doğru!';
+                    statusText.style.color = '#2ecc71';
+                    progressBar.style.backgroundColor = '#2ecc71';
+                    errorMsg.style.display = 'none';
+                    successMsg.style.display = 'block';
+                    successMsg.textContent = 'Doğru!';
+
+                    // Doğru ses efektini çal
+                    const correctSound = document.getElementById('practiceCorrectSound');
+                    if (correctSound) {
+                        correctSound.currentTime = 0;
+                        correctSound.play().catch(e => console.log('Ses çalma hatası:', e));
+                    }
+                } else {
+                    statusText.textContent = 'Yanlış!';
+                    statusText.style.color = '#e74c3c';
+                    progressBar.style.backgroundColor = '#e74c3c';
+                    successMsg.style.display = 'none';
+                    if (data.prediction) {
+                        errorMsg.textContent = `Algılanan: ${data.prediction}`;
+                        errorMsg.style.display = 'block';
+                    }
+                }
+                
+                // 2 saniye sonra mesajları sıfırla
+                practiceMessageTimeout = setTimeout(() => {
+                    successMsg.style.display = 'none';
+                    errorMsg.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    progressBar.style.backgroundColor = '#3498db';
+                    statusText.textContent = 'El bekleniyor...';
+                    statusText.style.color = '#3498db';
+                    practiceMessageTimeout = null;
+                }, 2000);
+            }
+            // El algılanmadığında ve doğrulama mesajı gösterilmiyorsa
+            else if (!data.hand_detected && !practiceMessageTimeout) {
+                progressBar.style.width = '0%';
+                progressBar.style.backgroundColor = '#3498db';
+                statusText.textContent = 'El bekleniyor...';
+                statusText.style.color = '#3498db';
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+            }
+        });
+
+        // Kelime Pratik Modu başlatıcı (frontend akışı)
+        function startWordTraining() {
+            socket.emit('start_word_training');
+            startWordCamera();
+        }
+        function startWordCamera() {
+            navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720, facingMode: "user" }
+            }).then(function(stream) {
+                wordStream = stream;
+                captureAndSendWordFrame();
+            });
+        }
+        function captureAndSendWordFrame() {
+            if (wordStream) {
+                const video = document.createElement('video');
+                video.srcObject = wordStream;
+                video.play();
+                video.onloadeddata = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    const frame = canvas.toDataURL('image/jpeg', 0.8);
+                    if (frame) {
+                        socket.emit('word_frame', frame);
+                    }
+                    requestAnimationFrame(captureAndSendWordFrame);
+                };
+            }
+        }
+        socket.on('word_result', function(data) {
+            if (data.frame) {
+                document.getElementById('wordProcessedVideo').src = `data:image/jpeg;base64,${data.frame}`;
+                document.getElementById('wordProcessedVideo').style.display = 'block';
+            }
+            if (data.target_word_colored) {
+                document.getElementById('wordTarget').innerHTML = data.target_word_colored;
+            }
+            if (data.score) {
+                document.getElementById('wordScore').textContent = data.score;
+            }
+            if (data.success) {
+                document.getElementById('wordSuccessMsg').style.display = 'block';
+                setTimeout(() => { document.getElementById('wordSuccessMsg').style.display = 'none'; }, 1000);
+            }
+        });
+
+        // Hız Testi Modu başlatıcı (frontend akışı)
+        function startSpeedTest() {
+            socket.emit('start_speed_test');
+            startSpeedCamera();
+        }
+        function startSpeedCamera() {
+            navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720, facingMode: "user" }
+            }).then(function(stream) {
+                speedStream = stream;
+                captureAndSendSpeedFrame();
+            });
+        }
+        function captureAndSendSpeedFrame() {
+            if (speedStream) {
+                const video = document.createElement('video');
+                video.srcObject = speedStream;
+                video.play();
+                video.onloadeddata = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    const frame = canvas.toDataURL('image/jpeg', 0.8);
+                    if (frame) {
+                        socket.emit('speed_frame', frame);
+                    }
+                    requestAnimationFrame(captureAndSendSpeedFrame);
+                };
+            }
+        }
+        socket.on('speed_result', function(data) {
+            if (data.frame) {
+                document.getElementById('speedProcessedVideo').src = `data:image/jpeg;base64,${data.frame}`;
+                document.getElementById('speedProcessedVideo').style.display = 'block';
+            }
+            if (data.target_word_colored) {
+                document.getElementById('speedTarget').innerHTML = data.target_word_colored;
+            }
+            if (data.time_left) {
+                document.getElementById('speedTime').textContent = data.time_left;
+            }
+            if (data.score) {
+                document.getElementById('speedScore').textContent = data.score;
+            }
+            if (data.success) {
+                document.getElementById('speedSuccessMsg').style.display = 'block';
+                setTimeout(() => { document.getElementById('speedSuccessMsg').style.display = 'none'; }, 1000);
+            }
+            if (data.game_over) {
+                document.getElementById('speedGameOverMsg').style.display = 'block';
+            } else {
+                document.getElementById('speedGameOverMsg').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
